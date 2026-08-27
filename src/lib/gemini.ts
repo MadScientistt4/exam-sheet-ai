@@ -2,19 +2,26 @@ import { GoogleGenAI, type ContentListUnion } from "@google/genai";
 
 export const DEFAULT_MAX_MARKS = 2;
 
-// Models tried in order. "gemini-flash-latest" is Google's rolling alias for
-// their current recommended flash model — using it (instead of only a dated
-// name like "gemini-2.0-flash") avoids silently breaking again the next time
-// a specific model version is retired. The pinned models behind it are a
-// known-good fallback with their own separate free-tier quota.
+// Models tried in order. The "-latest" names are Google's rolling aliases for
+// their current recommended models — using them (instead of only a dated name
+// like "gemini-2.0-flash") avoids silently breaking again the next time a
+// specific model version is retired. Lite variants go first: for this
+// structured-extraction/grading task they're both accurate enough and far
+// faster (~1s vs ~12s for full flash in testing), which also matters for
+// staying under Vercel's function timeout. The full flash-latest is kept as a
+// last-resort fallback for capability, not speed.
 const MODEL_CHAIN = Array.from(
   new Set([
-    process.env.GEMINI_MODEL || "gemini-flash-latest",
+    process.env.GEMINI_MODEL || "gemini-flash-lite-latest",
+    "gemini-flash-lite-latest",
+    "gemini-3.5-flash-lite",
     "gemini-flash-latest",
-    "gemini-2.5-flash",
-    "gemini-2.5-flash-lite",
   ])
 );
+
+// Bounds any single model call so one slow/hanging attempt can't consume the
+// entire request budget and starve the fallbacks behind it.
+const PER_CALL_TIMEOUT_MS = 20_000;
 
 let client: GoogleGenAI | null = null;
 
@@ -50,7 +57,11 @@ async function generateStructuredJson<T>(
       const response = await ai.models.generateContent({
         model,
         contents,
-        config: { responseMimeType: "application/json", responseJsonSchema },
+        config: {
+          responseMimeType: "application/json",
+          responseJsonSchema,
+          abortSignal: AbortSignal.timeout(PER_CALL_TIMEOUT_MS),
+        },
       });
       return parseJsonResponse<T>(response.text, label);
     } catch (error) {
