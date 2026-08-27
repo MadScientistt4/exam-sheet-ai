@@ -14,6 +14,7 @@ type AnswerSheetViewerProps = {
   zoom: number;
   onZoomChange: (zoom: number) => void;
   selectedQuestionId: string | null;
+  className?: string;
 };
 
 export function AnswerSheetViewer({
@@ -25,6 +26,7 @@ export function AnswerSheetViewer({
   zoom,
   onZoomChange,
   selectedQuestionId,
+  className = "flex",
 }: AnswerSheetViewerProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [pageImages, setPageImages] = useState<Record<number, string>>({});
@@ -52,40 +54,43 @@ export function AnswerSheetViewer({
   const imageSrc = sheet.kind === "image" ? sheet.previewUrl : pageImages[page];
   const regionsOnPage = selectedQuestion?.regions.filter((r) => r.page === page) ?? [];
   const unmatchedOnPage = unmatched.filter((u) => u.page === page);
+  const selectedQuestionLabel = selectedQuestion
+    ? `Q${selectedQuestion.number}${selectedQuestion.subPart ? ` (${selectedQuestion.subPart})` : ""}`
+    : undefined;
 
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-2xl bg-ink">
+    <div className={`${className} h-full flex-col overflow-hidden rounded-2xl bg-ink`}>
       <div className="flex shrink-0 items-center justify-between px-4 py-3">
-        <span className="text-sm font-semibold text-white">Answer Sheet</span>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 rounded-full bg-white/10 px-2 py-1">
+        <span className="hidden text-sm font-semibold text-white lg:inline">Answer Sheet</span>
+        <div className="flex flex-1 items-center justify-between gap-3 lg:flex-none lg:justify-end">
+          <div className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-2 lg:px-2 lg:py-1">
             <button
               type="button"
               aria-label="Zoom out"
               onClick={() => onZoomChange(Math.max(50, zoom - 10))}
-              className="flex h-6 w-6 items-center justify-center rounded-full text-white/80 hover:bg-white/10"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-white/80 hover:bg-white/10 lg:h-6 lg:w-6"
             >
-              <Minus className="h-3.5 w-3.5" />
+              <Minus className="h-4 w-4 lg:h-3.5 lg:w-3.5" />
             </button>
-            <span className="w-10 text-center text-xs font-medium text-white">{zoom}%</span>
+            <span className="w-10 text-center text-sm font-medium text-white lg:text-xs">{zoom}%</span>
             <button
               type="button"
               aria-label="Zoom in"
               onClick={() => onZoomChange(Math.min(200, zoom + 10))}
-              className="flex h-6 w-6 items-center justify-center rounded-full text-white/80 hover:bg-white/10"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-white/80 hover:bg-white/10 lg:h-6 lg:w-6"
             >
-              <Plus className="h-3.5 w-3.5" />
+              <Plus className="h-4 w-4 lg:h-3.5 lg:w-3.5" />
             </button>
           </div>
-          <div className="flex items-center gap-1 text-xs font-medium text-white/80">
+          <div className="flex items-center gap-1 rounded-full bg-white/10 px-2 py-2 text-sm font-semibold text-white lg:bg-transparent lg:px-0 lg:py-0 lg:text-xs lg:font-medium lg:text-white/80">
             <button
               type="button"
               aria-label="Previous page"
               disabled={page <= 1}
               onClick={() => onPageChange(page - 1)}
-              className="flex h-6 w-6 items-center justify-center rounded-full hover:bg-white/10 disabled:opacity-30"
+              className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-white/10 disabled:opacity-30 lg:h-6 lg:w-6"
             >
-              <ChevronLeft className="h-3.5 w-3.5" />
+              <ChevronLeft className="h-4 w-4 lg:h-3.5 lg:w-3.5" />
             </button>
             <span>
               Page {page} of {sheet.pageCount}
@@ -95,9 +100,9 @@ export function AnswerSheetViewer({
               aria-label="Next page"
               disabled={page >= sheet.pageCount}
               onClick={() => onPageChange(page + 1)}
-              className="flex h-6 w-6 items-center justify-center rounded-full hover:bg-white/10 disabled:opacity-30"
+              className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-white/10 disabled:opacity-30 lg:h-6 lg:w-6"
             >
-              <ChevronRight className="h-3.5 w-3.5" />
+              <ChevronRight className="h-4 w-4 lg:h-3.5 lg:w-3.5" />
             </button>
           </div>
         </div>
@@ -116,7 +121,7 @@ export function AnswerSheetViewer({
           )}
 
           {regionsOnPage.map((region, i) => (
-            <RegionOverlay key={i} region={region} tone="selected" />
+            <RegionOverlay key={i} region={region} tone="selected" label={selectedQuestionLabel} />
           ))}
           {unmatchedOnPage.map((region, i) => (
             <RegionOverlay key={i} region={region} tone="unmatched" label="Unmatched" />
@@ -149,7 +154,11 @@ function RegionOverlay({
       }}
     >
       {label && (
-        <span className="absolute -top-3 left-1 rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-bold text-ink">
+        <span
+          className={`absolute -top-3 left-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+            tone === "selected" ? "bg-emerald-500 text-white" : "bg-white/70 text-ink"
+          }`}
+        >
           {label}
         </span>
       )}

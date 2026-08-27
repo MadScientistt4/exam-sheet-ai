@@ -44,7 +44,7 @@ export function FileDropzone({
       }}
       onDragLeave={() => setDragActive(false)}
       onDrop={document ? undefined : handleDrop}
-      className={`flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed px-6 py-10 text-center transition-colors md:rounded-none md:border-0 ${
+      className={`flex flex-1 flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-6 py-5 text-center shadow-sm transition-colors md:gap-3 md:py-6 ${
         dragActive ? "border-accent bg-accent-tint/40" : "border-panel-border bg-white"
       }`}
     >
@@ -101,10 +101,10 @@ export function FileDropzone({
           type="button"
           disabled={busy}
           onClick={() => inputRef.current?.click()}
-          className="flex flex-col items-center gap-3 disabled:opacity-60"
+          className="flex flex-col items-center gap-2 disabled:opacity-60"
         >
-          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-canvas text-ink">
-            <Upload className="h-5 w-5" strokeWidth={2} />
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-canvas text-ink">
+            <Upload className="h-4 w-4" strokeWidth={2} />
           </span>
           <span className="text-base font-bold text-ink">
             {label} <span className="text-accent">{highlight}</span>

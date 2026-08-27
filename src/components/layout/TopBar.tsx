@@ -24,7 +24,7 @@ export function TopBar() {
             className="relative flex h-9 w-9 items-center justify-center rounded-full bg-canvas text-ink"
           >
             <Bell className="h-[18px] w-[18px]" />
-            <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-accent" />
+            {/* <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-accent" /> */}
           </button>
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-soft text-xs font-bold text-accent-dark">
             MR
@@ -69,7 +69,7 @@ export function TopBar() {
             className="relative flex h-9 w-9 items-center justify-center rounded-full text-ink hover:bg-canvas"
           >
             <Bell className="h-[18px] w-[18px]" />
-            <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-accent" />
+            {/* <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-accent" /> */}
           </button>
           <button
             type="button"
@@ -86,7 +86,7 @@ export function TopBar() {
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-soft text-xs font-bold text-accent-dark">
               MR
             </div>
-            <span className="text-sm font-semibold text-ink">Madhur Rastogi</span>
+            <span className="text-sm font-semibold text-ink">ABC Name </span>
             <ChevronDown className="h-4 w-4 text-muted" />
           </button>
         </div>

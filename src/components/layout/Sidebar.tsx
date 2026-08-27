@@ -129,8 +129,8 @@ export function Sidebar({ collapsed, onToggleCollapsed }: SidebarProps) {
             DP
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-ink">Delhi Public School</p>
-            <p className="truncate text-xs text-muted">Bokaro Steel City</p>
+            <p className="truncate text-sm font-bold text-ink">XYZ School</p>
+            <p className="truncate text-xs text-muted">Abc City</p>
           </div>
         </div>
       </div>
