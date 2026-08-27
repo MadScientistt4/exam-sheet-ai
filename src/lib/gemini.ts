@@ -1,4 +1,4 @@
-import { ApiError, GoogleGenAI, type ContentListUnion } from "@google/genai";
+import { GoogleGenAI, type ContentListUnion } from "@google/genai";
 
 export const DEFAULT_MAX_MARKS = 2;
 
@@ -16,8 +16,6 @@ const MODEL_CHAIN = Array.from(
   ])
 );
 
-const SAME_MODEL_RETRY_DELAY_MS = 800;
-
 let client: GoogleGenAI | null = null;
 
 function getClient(): GoogleGenAI {
@@ -31,19 +29,13 @@ function getClient(): GoogleGenAI {
   return client;
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/** 500/503 are worth one immediate retry on the same model — they're usually a blip. */
-function isTransientServerError(error: unknown): boolean {
-  return error instanceof ApiError && (error.status === 500 || error.status === 503);
-}
-
 /**
- * Runs a Gemini call across the model fallback chain: each model gets up to
- * two tries (a same-model retry only for transient 5xx errors), then moves on
- * to the next model. Throws the last error if every model fails.
+ * Runs a Gemini call across the model fallback chain, one try per model, and
+ * moves straight to the next model on any failure. No same-model retry —
+ * this call is already the slow leg of the request on Vercel's function
+ * timeout, so doubling up on a single model would only make that worse for
+ * no real reliability gain (a failed attempt falls through to the next model
+ * either way). Throws the last error if every model fails.
  */
 async function generateStructuredJson<T>(
   contents: ContentListUnion,
@@ -54,22 +46,15 @@ async function generateStructuredJson<T>(
   let lastError: unknown;
 
   for (const model of MODEL_CHAIN) {
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      try {
-        const response = await ai.models.generateContent({
-          model,
-          contents,
-          config: { responseMimeType: "application/json", responseJsonSchema },
-        });
-        return parseJsonResponse<T>(response.text, label);
-      } catch (error) {
-        lastError = error;
-        if (attempt === 1 && isTransientServerError(error)) {
-          await sleep(SAME_MODEL_RETRY_DELAY_MS);
-          continue;
-        }
-        break;
-      }
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents,
+        config: { responseMimeType: "application/json", responseJsonSchema },
+      });
+      return parseJsonResponse<T>(response.text, label);
+    } catch (error) {
+      lastError = error;
     }
   }
 
