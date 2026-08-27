@@ -2,13 +2,15 @@
 
 AI-assisted grading tool: upload a question paper and a student's handwritten answer sheet, extract questions and answers, map answers to questions, and highlight the exact answer region on the sheet.
 
-Built with Next.js (App Router, TypeScript, Tailwind). AI extraction uses Google Gemini (`gemini-2.5-flash` by default) via `@google/genai`.
+Built with Next.js (App Router, TypeScript, Tailwind). AI extraction uses Google Gemini (`gemini-flash-lite-latest` by default) via `@google/genai`.
 
 ## Approach
 
 Two-step pipeline, each step a real Gemini call:
 
 1. **Question extraction** (`POST /api/extract-questions`) — the question paper (PDF, image, or plain `.txt`) is sent to Gemini with a JSON schema forcing structured output: printed number, sub-part label (e.g. `11` / `a`), question text, marks if printed on the paper, and — for multiple-choice questions — the option letters/text. `.txt` is accepted here as a convenience for a digital question paper — the answer sheet stays PDF/image-only since it's inherently a handwritten scan.
+
+   **Marks for multi-part questions**: if each sub-part has its own printed marks (e.g. `(a) [2]`), those are used directly. If only one combined total is printed for the whole question (e.g. `5. Explain X. [5]` with sub-parts `(a)`/`(b)`/`(c)` and no individual breakdown), extraction divides that total evenly across the sub-parts (remainder to the earlier ones) instead of giving the full total to each — this was a real bug (every sub-part was getting the whole parent total, e.g. 5/5/5 instead of 2/2/1). Extraction is also the sole source of truth for `maxMarks`; the grading step is told what to score each answer out of rather than being asked to redecide it, so it can't reintroduce the same inconsistency. Extraction also no longer emits a separate entry for a multi-part question's stem/intro text alongside its sub-parts, which was double-counting marks in testing.
 2. **Answer mapping + grading** (`POST /api/map-answers`) — the answer sheet plus the extracted question list (including any MCQ options) are sent to Gemini in one call. For each question it returns whether it was attempted, one bounding-box region per contiguous block of handwriting (as `0-1` fractions of that page, supporting answers that span multiple regions/pages), a score, and one-sentence feedback. For MCQs, a bare selected letter (e.g. "D") is resolved against that question's option text so it's graded for correctness, not just presence. Handwritten content that doesn't correspond to any question comes back as a separate `unmatched` list. The same call also returns a 2-3 sentence `overallFeedback` — a holistic summary of the student's performance across the whole exam — so there's no extra round-trip for it.
 
 The mapping screen shows a dedicated grading summary (score, correct/partial/incorrect/unanswered breakdown, and the overall feedback) above the question list and answer sheet panels, rather than a single-line score subtitle.

@@ -107,17 +107,21 @@ export async function POST(request: Request) {
       }
 
       const regions = seed.regions.map(toRegion).filter((r): r is AnswerRegion => r !== null);
-      const maxMarks = seed.maxMarks ?? q.maxMarks ?? DEFAULT_MAX_MARKS;
+      // Extraction is the only step that actually reads the question paper, so
+      // its maxMarks (including any even split across sub-parts) is authoritative —
+      // grading is told what to score out of, not asked to redecide it.
+      const maxMarks = q.maxMarks ?? DEFAULT_MAX_MARKS;
+      const earned =
+        seed.matched && typeof seed.score === "number"
+          ? Math.max(0, Math.min(seed.score, maxMarks))
+          : null;
 
       return {
         ...q,
         maxMarks,
         matched: seed.matched,
         regions,
-        score:
-          seed.matched && typeof seed.score === "number"
-            ? { earned: seed.score, total: maxMarks }
-            : null,
+        score: earned !== null ? { earned, total: maxMarks } : null,
         aiFeedback: seed.feedback,
       };
     });

@@ -103,11 +103,11 @@ const QUESTION_EXTRACTION_PROMPT = `You are reading an exam question paper (a sc
 
 Extract every question in the exact order they are printed. Rules:
 - Preserve the original printed numbering exactly as shown (e.g. "1", "2", "11").
-- If a question has labelled sub-parts (e.g. (a), (b), (i), (ii)), output each sub-part as its own entry. Each sub-part entry shares the same "number" as its parent question, and "subPart" holds just the sub-label without punctuation (e.g. "a", "i").
+- If a question has labelled sub-parts (e.g. (a), (b), (i), (ii)), output ONLY the sub-part entries — never a separate entry for the parent/stem text itself, even if that stem reads like a complete sentence on its own. Each sub-part entry shares the same "number" as its parent question, and "subPart" holds just the sub-label without punctuation (e.g. "a", "i"). Any shared instruction or context in the stem (e.g. "Answer the following about X:") belongs in each sub-part's own "text" only if needed to make that sub-part understandable alone; otherwise leave it out.
 - If a question has no sub-parts, omit "subPart" entirely.
 - "text" is the full question text (without the leading number/label, and without the option list for MCQs).
 - If a question is multiple-choice (has lettered/numbered options like (a)/(b)/(c)/(d) or A)/B)/C)/D) to choose from), set "type" to "mcq" and include "options": an array of {"label": <the option's printed letter/number, e.g. "A">, "text": <that option's text>}, in printed order. Otherwise set "type" to "written" and omit "options".
-- If the marks for a question are printed (e.g. "[2]", "(2 marks)"), include them as "maxMarks" (a number). Otherwise omit "maxMarks".
+- Marks: if a sub-part has its OWN individually printed marks (e.g. "(a) [2]", "(b) [3]"), use that exact value as its "maxMarks". If a question has sub-parts but only ONE combined marks value is printed for the whole question (e.g. "5. Explain X. [5] (a) ... (b) ... (c) ..." with no per-part breakdown), divide that total as evenly as possible across its sub-parts and give any remainder to the earlier sub-parts (e.g. 5 marks over 3 sub-parts → 2, 2, 1) — every sub-part must get its own share, never the full parent total. If a question has no sub-parts, use the printed marks directly. If no marks are printed anywhere for a question, omit "maxMarks" entirely.
 - Do not include section headers, instructions, or the paper's title as questions.
 - Return questions in the same order they appear on the page(s).
 
@@ -193,7 +193,6 @@ export type AnswerSeed = {
   matched: boolean;
   regions: RegionSeed[];
   score?: number;
-  maxMarks?: number;
   feedback: string;
 };
 
@@ -224,7 +223,6 @@ const ANSWER_MAPPING_SCHEMA = {
           matched: { type: "boolean" },
           regions: { type: "array", items: REGION_SCHEMA },
           score: { type: "number" },
-          maxMarks: { type: "number" },
           feedback: { type: "string" },
         },
         required: ["number", "matched", "regions", "feedback"],
@@ -288,7 +286,7 @@ For each question in the list:
 - Determine whether the student attempted it anywhere on the sheet.
 - If attempted, find every region containing that answer. An answer may span multiple lines, or continue onto a later page — list one region per contiguous block of handwriting, in reading order. Tightly bound just the handwritten answer content, not the whole page.
 - Each region is: {"page": <1-indexed page number matching the sheet's page order>, "x": <0-1>, "y": <0-1>, "width": <0-1>, "height": <0-1>} where x/y/width/height are FRACTIONS of that page's full width/height (top-left origin). Do not use a 0-1000 scale — use 0-1 fractions.
-- Grade the answer against the question. If the question has a marks value shown above, score out of that; otherwise score out of ${DEFAULT_MAX_MARKS} and set maxMarks to ${DEFAULT_MAX_MARKS}. Give one sentence of specific, constructive feedback explaining the score.
+- Grade the answer against the question. If the question has a marks value shown above, score out of exactly that value — it is already the correct max for this specific question or sub-part, so do not adjust it. If no marks value is shown, score out of ${DEFAULT_MAX_MARKS}. Give one sentence of specific, constructive feedback explaining the score.
 - If not attempted anywhere on the sheet, set matched to false, regions to an empty array, omit score, and set feedback to "No answer found on the sheet for this question."${mcqGuidance}
 
 Also list any handwritten content on the sheet that does NOT correspond to any question above (e.g. scratch work, an answer to a question not in this list, notes) as "unmatched" entries using the same region format plus a short "text" snippet of what it says.
