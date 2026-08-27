@@ -27,8 +27,9 @@ Answer-sheet pages are rendered client-side from the uploaded file via `pdfjs-di
 
 Core flow (upload → extract questions → map & grade answers → view side-by-side with highlighting, plus a dedicated grading summary and overall feedback) works end-to-end on desktop and mobile, including MCQ questions and a mobile Questions/Answer Sheet tab view. Verified against real scanned handwritten answer sheets, including one spanning multiple pages — not just synthetic test documents. Not yet done:
 
-- **Deployment** — code is ready (see below), but not actually deployed anywhere yet.
 - **Single combined PDF** (questions + answers in one file) — not wired up; would need a small prompt change plus a "same file for both" UI affordance.
+
+The Figma design includes sidebar/topbar chrome (Home, My Classroom, Assignments, My Library, Settings, AI Teacher's Toolkit, notifications, help, profile) for a broader product than this assignment scopes — only the Exams flow is real. Rather than leave those as dead buttons, they route to real pages with an honest "coming soon" state (`src/app/[section]/page.tsx`, `src/lib/placeholder-sections.ts`) instead of doing nothing when clicked. This also fixed a real gap: the mobile hamburger menu previously had no menu to open at all — there was no way to reach the sidebar's sections on a phone. It now opens a slide-in drawer with the same navigation.
 
 ### Deploying to Vercel
 

@@ -1,9 +1,17 @@
 "use client";
 
+import { useState } from "react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ArrowLeft, Bell, ChevronDown, ClipboardList, HelpCircle, Menu, Sparkles } from "lucide-react";
+import { MobileNav } from "@/components/layout/MobileNav";
 
-export function TopBar() {
+type TopBarProps = {
+  mobileNavOpen: boolean;
+  onToggleMobileNav: () => void;
+};
+
+export function TopBar({ mobileNavOpen, onToggleMobileNav }: TopBarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -31,20 +39,18 @@ export function TopBar() {
           <span className="text-lg font-bold text-ink">VedaAI</span>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            aria-label="Notifications"
-            className="relative flex h-9 w-9 items-center justify-center rounded-full bg-canvas text-ink"
+          <NotificationsButton className="bg-canvas" />
+          <Link
+            href="/settings"
+            aria-label="Profile"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-soft text-xs font-bold text-accent-dark"
           >
-            <Bell className="h-[18px] w-[18px]" />
-            {/* <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-accent" /> */}
-          </button>
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-soft text-xs font-bold text-accent-dark">
             MR
-          </div>
+          </Link>
           <button
             type="button"
-            aria-label="Open menu"
+            aria-label={mobileNavOpen ? "Close menu" : "Open menu"}
+            onClick={onToggleMobileNav}
             className="flex h-9 w-9 items-center justify-center rounded-full text-ink hover:bg-canvas"
           >
             <Menu className="h-[18px] w-[18px]" />
@@ -70,31 +76,24 @@ export function TopBar() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
+          <Link
+            href="/help"
             aria-label="Help"
             className="flex h-9 w-9 items-center justify-center rounded-full text-ink hover:bg-canvas"
           >
             <HelpCircle className="h-[18px] w-[18px]" />
-          </button>
-          <button
-            type="button"
-            aria-label="Notifications"
-            className="relative flex h-9 w-9 items-center justify-center rounded-full text-ink hover:bg-canvas"
-          >
-            <Bell className="h-[18px] w-[18px]" />
-            {/* <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-accent" /> */}
-          </button>
-          <button
-            type="button"
+          </Link>
+          <NotificationsButton />
+          <Link
+            href="/toolkit"
             aria-label="AI toolkit"
             className="flex h-9 w-9 items-center justify-center rounded-full text-ink hover:bg-canvas"
           >
             <Sparkles className="h-[18px] w-[18px]" />
-          </button>
+          </Link>
 
-          <button
-            type="button"
+          <Link
+            href="/settings"
             className="ml-1 flex items-center gap-2 rounded-full py-1 pl-1 pr-2 hover:bg-canvas"
           >
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-soft text-xs font-bold text-accent-dark">
@@ -102,9 +101,43 @@ export function TopBar() {
             </div>
             <span className="text-sm font-semibold text-ink">ABC Name </span>
             <ChevronDown className="h-4 w-4 text-muted" />
-          </button>
+          </Link>
         </div>
       </div>
+
+      <MobileNav open={mobileNavOpen} onClose={onToggleMobileNav} />
     </header>
+  );
+}
+
+function NotificationsButton({ className = "" }: { className?: string }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        aria-label="Notifications"
+        onClick={() => setOpen((o) => !o)}
+        className={`flex h-9 w-9 items-center justify-center rounded-full text-ink hover:bg-canvas ${className}`}
+      >
+        <Bell className="h-[18px] w-[18px]" />
+      </button>
+
+      {open && (
+        <>
+          <button
+            type="button"
+            aria-label="Close notifications"
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-40 cursor-default"
+          />
+          <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl bg-white p-4 text-left shadow-lg ring-1 ring-black/5">
+            <p className="text-sm font-bold text-ink">Notifications</p>
+            <p className="mt-1 text-sm text-muted">You&apos;re all caught up — no new notifications.</p>
+          </div>
+        </>
+      )}
+    </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import type { ExtractedQuestion } from "@/types/exam";
 
@@ -24,6 +25,7 @@ export function QuestionList({
   onSelect,
   className = "flex",
 }: QuestionListProps) {
+  const [expandAll, setExpandAll] = useState(false);
   const seenNumbers = new Set<string>();
 
   return (
@@ -32,9 +34,10 @@ export function QuestionList({
         <h2 className="text-base font-bold text-ink">Extracted Questions (from question paper)</h2>
         <button
           type="button"
+          onClick={() => setExpandAll((v) => !v)}
           className="self-start rounded-full border border-panel-border px-3 py-1.5 text-xs font-semibold text-ink hover:bg-canvas sm:self-auto"
         >
-          Expand All
+          {expandAll ? "Collapse All" : "Expand All"}
         </button>
       </div>
 
@@ -44,6 +47,7 @@ export function QuestionList({
             const showBadge = !seenNumbers.has(question.number);
             seenNumbers.add(question.number);
             const selected = question.id === selectedId;
+            const expanded = selected || expandAll;
 
             return (
               <div
@@ -87,12 +91,12 @@ export function QuestionList({
 
                   <ChevronDown
                     className={`mt-1 h-4 w-4 shrink-0 text-muted transition-transform ${
-                      selected ? "rotate-180" : ""
+                      expanded ? "rotate-180" : ""
                     }`}
                   />
                 </div>
 
-                {selected && (
+                {expanded && (
                   <div className="mt-3 ml-10 rounded-xl bg-canvas/70 p-3">
                     <p className="text-xs font-bold text-ink">AI Feedback</p>
                     <p className="mt-1 text-sm text-ink-soft">
