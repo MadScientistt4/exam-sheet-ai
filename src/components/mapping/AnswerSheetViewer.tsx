@@ -58,6 +58,13 @@ export function AnswerSheetViewer({
     ? `Q${selectedQuestion.number}${selectedQuestion.subPart ? ` (${selectedQuestion.subPart})` : ""}`
     : undefined;
 
+  // An answer can span multiple pages — surface that explicitly so it's easy
+  // to jump between them, rather than leaving the rest of the answer hidden
+  // on a page the teacher has no reason to think to visit.
+  const answerPages = selectedQuestion
+    ? Array.from(new Set(selectedQuestion.regions.map((r) => r.page))).sort((a, b) => a - b)
+    : [];
+
   return (
     <div className={`${className} h-full flex-col overflow-hidden rounded-2xl bg-ink`}>
       <div className="flex shrink-0 items-center justify-between px-4 py-3">
@@ -107,6 +114,24 @@ export function AnswerSheetViewer({
           </div>
         </div>
       </div>
+
+      {answerPages.length > 1 && (
+        <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-white/10 px-4 py-2">
+          <span className="text-xs text-white/60">This answer spans multiple pages:</span>
+          {answerPages.map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => onPageChange(p)}
+              className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-colors ${
+                p === page ? "bg-emerald-500 text-white" : "bg-white/10 text-white/80 hover:bg-white/20"
+              }`}
+            >
+              Page {p}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div ref={scrollRef} className="flex-1 overflow-auto bg-black/20 p-4">
         <div style={{ width: `${zoom}%` }} className="relative mx-auto">

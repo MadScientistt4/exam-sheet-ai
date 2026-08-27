@@ -35,6 +35,39 @@ function toRegion(raw: unknown): AnswerRegion | null {
   };
 }
 
+// Small visual seam left between two adjacent regions rather than having them
+// touch pixel-for-pixel.
+const REGION_GAP = 0.008;
+
+/**
+ * The model is much more reliable at knowing where a block of handwriting
+ * STARTS than where it precisely ENDS — dense, closely-written answers are
+ * exactly where it tends to cut a region short. Rather than trust its guess
+ * at the bottom edge, this stretches each region down to just before the
+ * next region on the same page starts (across every question's regions and
+ * any unmatched content), so an answer's full extent is always captured up
+ * to the point the next thing on the page visibly begins. Never shrinks a
+ * region — only extends one that's short.
+ */
+function extendRegionsToNextBoundary(regions: AnswerRegion[]): void {
+  const byPage = new Map<number, AnswerRegion[]>();
+  for (const region of regions) {
+    const list = byPage.get(region.page);
+    if (list) list.push(region);
+    else byPage.set(region.page, [region]);
+  }
+
+  for (const pageRegions of byPage.values()) {
+    pageRegions.sort((a, b) => a.y - b.y);
+    for (let i = 0; i < pageRegions.length - 1; i++) {
+      const current = pageRegions[i];
+      const next = pageRegions[i + 1];
+      const extendedBottom = Math.max(current.y + current.height, next.y - REGION_GAP);
+      current.height = Math.max(0, Math.min(1 - current.y, extendedBottom - current.y));
+    }
+  }
+}
+
 type IncomingQuestion = {
   id: string;
   number: string;
@@ -134,6 +167,11 @@ export async function POST(request: Request) {
         return { ...region, text: typeof u.text === "string" ? u.text : "" };
       })
       .filter((u): u is UnmatchedAnswer => u !== null);
+
+    extendRegionsToNextBoundary([
+      ...merged.flatMap((q) => q.regions),
+      ...unmatchedAnswers,
+    ]);
 
     return NextResponse.json({ questions: merged, unmatched: unmatchedAnswers, overallFeedback });
   } catch (error) {
