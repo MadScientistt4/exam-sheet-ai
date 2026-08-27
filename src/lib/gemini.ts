@@ -1,7 +1,20 @@
-import { GoogleGenAI } from "@google/genai";
+import { ApiError, GoogleGenAI, type ContentListUnion } from "@google/genai";
 
-const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 export const DEFAULT_MAX_MARKS = 2;
+
+// Models tried in order. The primary (env override or gemini-2.5-flash) goes first;
+// the rest are free-tier fallbacks with their own separate quota, used when the
+// primary is rate-limited, overloaded, or transiently erroring.
+const MODEL_CHAIN = Array.from(
+  new Set([
+    process.env.GEMINI_MODEL || "gemini-2.5-flash",
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+    "gemini-2.0-flash",
+  ])
+);
+
+const SAME_MODEL_RETRY_DELAY_MS = 800;
 
 let client: GoogleGenAI | null = null;
 
@@ -14,6 +27,51 @@ function getClient(): GoogleGenAI {
   }
   if (!client) client = new GoogleGenAI({ apiKey });
   return client;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** 500/503 are worth one immediate retry on the same model — they're usually a blip. */
+function isTransientServerError(error: unknown): boolean {
+  return error instanceof ApiError && (error.status === 500 || error.status === 503);
+}
+
+/**
+ * Runs a Gemini call across the model fallback chain: each model gets up to
+ * two tries (a same-model retry only for transient 5xx errors), then moves on
+ * to the next model. Throws the last error if every model fails.
+ */
+async function generateStructuredJson<T>(
+  contents: ContentListUnion,
+  responseJsonSchema: object,
+  label: string
+): Promise<T> {
+  const ai = getClient();
+  let lastError: unknown;
+
+  for (const model of MODEL_CHAIN) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents,
+          config: { responseMimeType: "application/json", responseJsonSchema },
+        });
+        return parseJsonResponse<T>(response.text, label);
+      } catch (error) {
+        lastError = error;
+        if (attempt === 1 && isTransientServerError(error)) {
+          await sleep(SAME_MODEL_RETRY_DELAY_MS);
+          continue;
+        }
+        break;
+      }
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(`Gemini failed while ${label}.`);
 }
 
 function parseJsonResponse<T>(raw: string | undefined, label: string): T {
@@ -73,11 +131,8 @@ export async function extractQuestionsFromPaper(
   fileBase64: string,
   mimeType: string
 ): Promise<QuestionSeed[]> {
-  const ai = getClient();
-
-  const response = await ai.models.generateContent({
-    model: MODEL,
-    contents: [
+  const parsed = await generateStructuredJson<{ questions?: unknown }>(
+    [
       {
         role: "user",
         parts: [
@@ -86,13 +141,10 @@ export async function extractQuestionsFromPaper(
         ],
       },
     ],
-    config: {
-      responseMimeType: "application/json",
-      responseJsonSchema: QUESTION_EXTRACTION_SCHEMA,
-    },
-  });
+    QUESTION_EXTRACTION_SCHEMA,
+    "extracting questions"
+  );
 
-  const parsed = parseJsonResponse<{ questions?: unknown }>(response.text, "extracting questions");
   if (!Array.isArray(parsed.questions)) {
     throw new Error("Gemini's response was missing a 'questions' array.");
   }
@@ -213,11 +265,8 @@ export async function mapAndGradeAnswers(
   mimeType: string,
   questions: { number: string; subPart?: string; text: string; maxMarks?: number }[]
 ): Promise<{ answers: AnswerSeed[]; unmatched: UnmatchedSeed[] }> {
-  const ai = getClient();
-
-  const response = await ai.models.generateContent({
-    model: MODEL,
-    contents: [
+  const parsed = await generateStructuredJson<{ answers?: unknown; unmatched?: unknown }>(
+    [
       {
         role: "user",
         parts: [
@@ -226,16 +275,10 @@ export async function mapAndGradeAnswers(
         ],
       },
     ],
-    config: {
-      responseMimeType: "application/json",
-      responseJsonSchema: ANSWER_MAPPING_SCHEMA,
-    },
-  });
-
-  const parsed = parseJsonResponse<{ answers?: unknown; unmatched?: unknown }>(
-    response.text,
+    ANSWER_MAPPING_SCHEMA,
     "mapping answers"
   );
+
   if (!Array.isArray(parsed.answers)) {
     throw new Error("Gemini's response was missing an 'answers' array.");
   }

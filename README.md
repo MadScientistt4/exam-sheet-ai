@@ -15,6 +15,8 @@ Everything is in-memory: uploaded files never touch a database, and exam state l
 
 Answer-sheet pages are rendered client-side from the uploaded file via `pdfjs-dist` (canvas), and the highlight regions are drawn as absolutely-positioned overlays scaled as percentages, so they track zoom automatically without needing pixel math.
 
+**Reliability**: the free Gemini tier occasionally rate-limits or returns a transient 5xx. `src/lib/gemini.ts` handles this with a model fallback chain (configured `GEMINI_MODEL` → `gemini-2.5-flash` → `gemini-2.5-flash-lite` → `gemini-2.0-flash`, deduped) — a 500/503 gets one immediate retry on the same model, anything else (429, bad JSON, etc.) moves straight to the next model in the chain. Both extraction calls go through this same wrapper.
+
 ## Status
 
 Core flow (upload → extract questions → map & grade answers → view side-by-side with highlighting) works end-to-end on desktop and is responsive down to mobile widths. Not yet done: the mobile mapping screen layout, and a persisted/shareable result (currently single-session, in-memory only).
