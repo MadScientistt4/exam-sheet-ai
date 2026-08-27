@@ -2,15 +2,17 @@ import { ApiError, GoogleGenAI, type ContentListUnion } from "@google/genai";
 
 export const DEFAULT_MAX_MARKS = 2;
 
-// Models tried in order. The primary (env override or gemini-2.5-flash) goes first;
-// the rest are free-tier fallbacks with their own separate quota, used when the
-// primary is rate-limited, overloaded, or transiently erroring.
+// Models tried in order. "gemini-flash-latest" is Google's rolling alias for
+// their current recommended flash model — using it (instead of only a dated
+// name like "gemini-2.0-flash") avoids silently breaking again the next time
+// a specific model version is retired. The pinned models behind it are a
+// known-good fallback with their own separate free-tier quota.
 const MODEL_CHAIN = Array.from(
   new Set([
-    process.env.GEMINI_MODEL || "gemini-2.5-flash",
+    process.env.GEMINI_MODEL || "gemini-flash-latest",
+    "gemini-flash-latest",
     "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
-    "gemini-2.0-flash",
   ])
 );
 
