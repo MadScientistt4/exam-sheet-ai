@@ -1,8 +1,20 @@
 "use client";
 
+import { usePathname, useRouter } from "next/navigation";
 import { ArrowLeft, Bell, ChevronDown, ClipboardList, HelpCircle, Menu, Sparkles } from "lucide-react";
 
 export function TopBar() {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  function handleBack() {
+    if (pathname === "/exams/mapping") {
+      router.push("/exams/upload");
+    } else {
+      router.back();
+    }
+  }
+
   return (
     <header className="flex shrink-0 items-center justify-between rounded-full bg-white px-4 py-3">
       {/* Mobile app bar */}
@@ -11,6 +23,7 @@ export function TopBar() {
           <button
             type="button"
             aria-label="Go back"
+            onClick={handleBack}
             className="flex h-9 w-9 items-center justify-center rounded-full text-ink hover:bg-canvas"
           >
             <ArrowLeft className="h-[18px] w-[18px]" />
@@ -45,6 +58,7 @@ export function TopBar() {
           <button
             type="button"
             aria-label="Go back"
+            onClick={handleBack}
             className="flex h-9 w-9 items-center justify-center rounded-full text-ink hover:bg-canvas"
           >
             <ArrowLeft className="h-[18px] w-[18px]" />
