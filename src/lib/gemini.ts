@@ -94,7 +94,7 @@ export type QuestionSeed = {
   maxMarks?: number;
 };
 
-const QUESTION_EXTRACTION_PROMPT = `You are reading a scanned exam question paper (image or PDF).
+const QUESTION_EXTRACTION_PROMPT = `You are reading an exam question paper (a scanned image, a PDF, or plain text).
 
 Extract every question in the exact order they are printed. Rules:
 - Preserve the original printed numbering exactly as shown (e.g. "1", "2", "11").

@@ -1,13 +1,14 @@
 "use client";
 
 import { useRef, useState, type DragEvent } from "react";
-import { ImageIcon, Upload, X } from "lucide-react";
+import { FileText, ImageIcon, Upload, X } from "lucide-react";
 import { formatBytes } from "@/lib/format";
 import type { UploadedDocument } from "@/types/exam";
 
 type FileDropzoneProps = {
   label: string;
   highlight: string;
+  accept: string;
   document: UploadedDocument | null;
   busy: boolean;
   error: string | null;
@@ -18,6 +19,7 @@ type FileDropzoneProps = {
 export function FileDropzone({
   label,
   highlight,
+  accept,
   document,
   busy,
   error,
@@ -49,7 +51,7 @@ export function FileDropzone({
       <input
         ref={inputRef}
         type="file"
-        accept="application/pdf,image/png,image/jpeg,image/webp"
+        accept={accept}
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
@@ -64,6 +66,10 @@ export function FileDropzone({
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-red-500 text-[10px] font-bold text-white">
               PDF
             </span>
+          ) : document.kind === "text" ? (
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-slate-500 text-white">
+              <FileText className="h-4 w-4" />
+            </span>
           ) : (
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-sky-500 text-white">
               <ImageIcon className="h-4 w-4" />
@@ -72,8 +78,13 @@ export function FileDropzone({
           <div className="min-w-0 flex-1 text-left">
             <p className="truncate text-sm font-bold text-ink">{document.name}</p>
             <p className="text-xs text-muted">
-              {formatBytes(document.sizeBytes)} &bull; {document.pageCount}{" "}
-              {document.pageCount === 1 ? "Page" : "Pages"}
+              {formatBytes(document.sizeBytes)}
+              {document.kind !== "text" && (
+                <>
+                  {" "}
+                  &bull; {document.pageCount} {document.pageCount === 1 ? "Page" : "Pages"}
+                </>
+              )}
             </p>
           </div>
           <button

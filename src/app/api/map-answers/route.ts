@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { DEFAULT_MAX_MARKS, mapAndGradeAnswers } from "@/lib/gemini";
-import { ACCEPTED_TYPES, MAX_FILE_BYTES } from "@/lib/upload-constraints";
+import { ANSWER_SHEET_TYPES, MAX_FILE_BYTES } from "@/lib/upload-constraints";
 import type { AnswerRegion, ExtractedQuestion, UnmatchedAnswer } from "@/types/exam";
 
 export const runtime = "nodejs";
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "Missing 'answerSheet' file." }, { status: 400 });
   }
-  if (!ACCEPTED_TYPES.includes(file.type)) {
+  if (!ANSWER_SHEET_TYPES.includes(file.type)) {
     return NextResponse.json({ error: "Unsupported file type." }, { status: 400 });
   }
   if (file.size > MAX_FILE_BYTES) {

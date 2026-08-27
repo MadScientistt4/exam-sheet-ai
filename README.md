@@ -8,7 +8,7 @@ Built with Next.js (App Router, TypeScript, Tailwind). AI extraction uses Google
 
 Two-step pipeline, each step a real Gemini call:
 
-1. **Question extraction** (`POST /api/extract-questions`) — the question paper (PDF or image) is sent to Gemini with a JSON schema forcing structured output: printed number, sub-part label (e.g. `11` / `a`), question text, and marks if printed on the paper.
+1. **Question extraction** (`POST /api/extract-questions`) — the question paper (PDF, image, or plain `.txt`) is sent to Gemini with a JSON schema forcing structured output: printed number, sub-part label (e.g. `11` / `a`), question text, and marks if printed on the paper. `.txt` is accepted here as a convenience for a digital question paper — the answer sheet stays PDF/image-only since it's inherently a handwritten scan.
 2. **Answer mapping + grading** (`POST /api/map-answers`) — the answer sheet plus the extracted question list are sent to Gemini in one call. For each question it returns whether it was attempted, one bounding-box region per contiguous block of handwriting (as `0-1` fractions of that page, supporting answers that span multiple regions/pages), a score, and one-sentence feedback. Handwritten content that doesn't correspond to any question comes back as a separate `unmatched` list.
 
 Everything is in-memory: uploaded files never touch a database, and exam state lives in a React context (`ExamStoreProvider`) that survives client-side navigation between `/exams/upload` and `/exams/mapping` but is lost on a hard refresh — that's an accepted tradeoff given the assignment's "in-memory storage is sufficient" scope, not an oversight.

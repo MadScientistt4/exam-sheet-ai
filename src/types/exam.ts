@@ -1,4 +1,4 @@
-export type DocumentKind = "pdf" | "image";
+export type DocumentKind = "pdf" | "image" | "text";
 
 export type UploadedDocument = {
   id: string;

@@ -2,7 +2,11 @@
 
 import { ArrowRight, BookOpen, Clock3, ScanLine, Sparkle } from "lucide-react";
 import { FileDropzone } from "@/components/upload/FileDropzone";
+import { ANSWER_SHEET_TYPES, QUESTION_PAPER_TYPES } from "@/lib/upload-constraints";
 import type { UploadedDocument } from "@/types/exam";
+
+const QUESTION_PAPER_ACCEPT = QUESTION_PAPER_TYPES.join(",");
+const ANSWER_SHEET_ACCEPT = ANSWER_SHEET_TYPES.join(",");
 
 const BADGES = [
   { icon: Clock3, className: "-top-1 right-6" },
@@ -84,6 +88,7 @@ export function UploadScreen({
         <FileDropzone
           label="Upload"
           highlight="Question Paper"
+          accept={QUESTION_PAPER_ACCEPT}
           document={questionPaper}
           busy={busyField === "question"}
           error={errors.question}
@@ -93,6 +98,7 @@ export function UploadScreen({
         <FileDropzone
           label="Upload"
           highlight="Answer Sheet"
+          accept={ANSWER_SHEET_ACCEPT}
           document={answerSheet}
           busy={busyField === "answer"}
           error={errors.answer}

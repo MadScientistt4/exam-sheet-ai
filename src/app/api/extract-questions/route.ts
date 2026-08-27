@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { extractQuestionsFromPaper } from "@/lib/gemini";
-import { ACCEPTED_TYPES, MAX_FILE_BYTES } from "@/lib/upload-constraints";
+import { MAX_FILE_BYTES, QUESTION_PAPER_TYPES } from "@/lib/upload-constraints";
 import type { ExtractedQuestion } from "@/types/exam";
 
 export const runtime = "nodejs";
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "Missing 'questionPaper' file." }, { status: 400 });
   }
-  if (!ACCEPTED_TYPES.includes(file.type)) {
+  if (!QUESTION_PAPER_TYPES.includes(file.type)) {
     return NextResponse.json({ error: "Unsupported file type." }, { status: 400 });
   }
   if (file.size > MAX_FILE_BYTES) {

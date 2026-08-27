@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { buildUploadedDocument } from "@/lib/document";
-import { ACCEPTED_TYPES, MAX_FILE_BYTES } from "@/lib/upload-constraints";
+import { ANSWER_SHEET_TYPES, MAX_FILE_BYTES, QUESTION_PAPER_TYPES } from "@/lib/upload-constraints";
 import type { ExtractedQuestion, UnmatchedAnswer, UploadedDocument } from "@/types/exam";
 
 type FieldKey = "question" | "answer";
@@ -41,8 +41,10 @@ export function ExamStoreProvider({ children }: { children: React.ReactNode }) {
   const [unmatched, setUnmatched] = useState<UnmatchedAnswer[]>([]);
 
   const selectFile = useCallback(async (field: FieldKey, file: File) => {
-    if (!ACCEPTED_TYPES.includes(file.type)) {
-      setFieldErrors((e) => ({ ...e, [field]: "Unsupported file type. Use PDF, PNG, JPG or WEBP." }));
+    const allowedTypes = field === "question" ? QUESTION_PAPER_TYPES : ANSWER_SHEET_TYPES;
+    if (!allowedTypes.includes(file.type)) {
+      const hint = field === "question" ? "PDF, PNG, JPG, WEBP or TXT" : "PDF, PNG, JPG or WEBP";
+      setFieldErrors((e) => ({ ...e, [field]: `Unsupported file type. Use ${hint}.` }));
       return;
     }
     if (file.size > MAX_FILE_BYTES) {
