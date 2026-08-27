@@ -63,10 +63,22 @@ export function QuestionList({ questions, selectedId, onSelect, summary }: Quest
                     {question.number}
                   </span>
 
-                  <p className="flex-1 text-sm text-ink">
-                    {question.subPart && <span className="font-semibold">{question.subPart}. </span>}
-                    {question.text}
-                  </p>
+                  <div className="flex-1">
+                    <p className="text-sm text-ink">
+                      {question.subPart && <span className="font-semibold">{question.subPart}. </span>}
+                      {question.text}
+                    </p>
+                    {question.type === "mcq" && question.options.length > 0 && (
+                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+                        {question.options.map((option) => (
+                          <span key={option.label} className="text-xs text-muted">
+                            <span className="font-semibold text-ink-soft">{option.label}.</span>{" "}
+                            {option.text}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
                   <span
                     className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${scorePillClasses(question)}`}

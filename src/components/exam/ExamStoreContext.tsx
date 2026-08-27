@@ -101,6 +101,8 @@ export function ExamStoreProvider({ children }: { children: React.ReactNode }) {
             number: q.number,
             subPart: q.subPart,
             text: q.text,
+            type: q.type,
+            options: q.options,
             maxMarks: q.maxMarks,
           }))
         )

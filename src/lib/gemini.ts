@@ -87,25 +87,42 @@ function parseJsonResponse<T>(raw: string | undefined, label: string): T {
 // Question extraction
 // ---------------------------------------------------------------------------
 
+export type QuestionOptionSeed = {
+  label: string;
+  text: string;
+};
+
 export type QuestionSeed = {
   number: string;
   subPart?: string;
   text: string;
+  type: "written" | "mcq";
+  options?: QuestionOptionSeed[];
   maxMarks?: number;
 };
 
-const QUESTION_EXTRACTION_PROMPT = `You are reading an exam question paper (a scanned image, a PDF, or plain text).
+const QUESTION_EXTRACTION_PROMPT = `You are reading an exam question paper (a scanned image, a PDF, or plain text). The paper may mix regular written questions and multiple-choice questions.
 
 Extract every question in the exact order they are printed. Rules:
 - Preserve the original printed numbering exactly as shown (e.g. "1", "2", "11").
 - If a question has labelled sub-parts (e.g. (a), (b), (i), (ii)), output each sub-part as its own entry. Each sub-part entry shares the same "number" as its parent question, and "subPart" holds just the sub-label without punctuation (e.g. "a", "i").
 - If a question has no sub-parts, omit "subPart" entirely.
-- "text" is the full question text (without the leading number/label).
+- "text" is the full question text (without the leading number/label, and without the option list for MCQs).
+- If a question is multiple-choice (has lettered/numbered options like (a)/(b)/(c)/(d) or A)/B)/C)/D) to choose from), set "type" to "mcq" and include "options": an array of {"label": <the option's printed letter/number, e.g. "A">, "text": <that option's text>}, in printed order. Otherwise set "type" to "written" and omit "options".
 - If the marks for a question are printed (e.g. "[2]", "(2 marks)"), include them as "maxMarks" (a number). Otherwise omit "maxMarks".
 - Do not include section headers, instructions, or the paper's title as questions.
 - Return questions in the same order they appear on the page(s).
 
 Return only JSON matching the provided schema — no markdown fences, no commentary.`;
+
+const QUESTION_OPTION_SCHEMA = {
+  type: "object",
+  properties: {
+    label: { type: "string" },
+    text: { type: "string" },
+  },
+  required: ["label", "text"],
+};
 
 const QUESTION_EXTRACTION_SCHEMA = {
   type: "object",
@@ -118,9 +135,11 @@ const QUESTION_EXTRACTION_SCHEMA = {
           number: { type: "string" },
           subPart: { type: "string" },
           text: { type: "string" },
+          type: { type: "string", enum: ["written", "mcq"] },
+          options: { type: "array", items: QUESTION_OPTION_SCHEMA },
           maxMarks: { type: "number" },
         },
-        required: ["number", "text"],
+        required: ["number", "text", "type"],
       },
     },
   },
@@ -232,16 +251,34 @@ const ANSWER_MAPPING_SCHEMA = {
   required: ["answers"],
 };
 
-function buildAnswerMappingPrompt(
-  questions: { number: string; subPart?: string; text: string; maxMarks?: number }[]
-): string {
+type QuestionForPrompt = {
+  number: string;
+  subPart?: string;
+  text: string;
+  type: "written" | "mcq";
+  options?: QuestionOptionSeed[];
+  maxMarks?: number;
+};
+
+function buildAnswerMappingPrompt(questions: QuestionForPrompt[]): string {
+  const hasMcq = questions.some((q) => q.type === "mcq");
+
   const list = questions
     .map((q) => {
       const label = q.subPart ? `${q.number} (${q.subPart})` : q.number;
       const marks = q.maxMarks ? ` [${q.maxMarks} marks]` : "";
-      return `${label}: ${q.text}${marks}`;
+      const header = `${label}: ${q.text}${marks}`;
+      if (q.type === "mcq" && q.options?.length) {
+        const opts = q.options.map((o) => `${o.label}) ${o.text}`).join("  ");
+        return `${header}\n   Options: ${opts}`;
+      }
+      return header;
     })
     .join("\n");
+
+  const mcqGuidance = hasMcq
+    ? `\n\nSome questions above are multiple-choice (their options are listed under them). For these, the student's answer on the sheet may just be a single letter (e.g. "D"), a circled/underlined/ticked option, or the option's text copied out — any of these counts as an attempt, even though it's short. Locate wherever the student indicated their choice as the region. Grade by checking whether the option they indicated is the correct answer to the question, using the option text above to judge correctness — do not mark it wrong just because the answer itself is only one letter.`
+    : "";
 
   return `You are given a scanned, handwritten student answer sheet (image or PDF, possibly multiple pages) and the list of exam questions below. Questions may be answered out of order.
 
@@ -253,7 +290,7 @@ For each question in the list:
 - If attempted, find every region containing that answer. An answer may span multiple lines, or continue onto a later page — list one region per contiguous block of handwriting, in reading order. Tightly bound just the handwritten answer content, not the whole page.
 - Each region is: {"page": <1-indexed page number matching the sheet's page order>, "x": <0-1>, "y": <0-1>, "width": <0-1>, "height": <0-1>} where x/y/width/height are FRACTIONS of that page's full width/height (top-left origin). Do not use a 0-1000 scale — use 0-1 fractions.
 - Grade the answer against the question. If the question has a marks value shown above, score out of that; otherwise score out of ${DEFAULT_MAX_MARKS} and set maxMarks to ${DEFAULT_MAX_MARKS}. Give one sentence of specific, constructive feedback explaining the score.
-- If not attempted anywhere on the sheet, set matched to false, regions to an empty array, omit score, and set feedback to "No answer found on the sheet for this question."
+- If not attempted anywhere on the sheet, set matched to false, regions to an empty array, omit score, and set feedback to "No answer found on the sheet for this question."${mcqGuidance}
 
 Also list any handwritten content on the sheet that does NOT correspond to any question above (e.g. scratch work, an answer to a question not in this list, notes) as "unmatched" entries using the same region format plus a short "text" snippet of what it says.
 
@@ -263,7 +300,7 @@ Return only JSON matching the provided schema — no markdown fences, no comment
 export async function mapAndGradeAnswers(
   fileBase64: string,
   mimeType: string,
-  questions: { number: string; subPart?: string; text: string; maxMarks?: number }[]
+  questions: QuestionForPrompt[]
 ): Promise<{ answers: AnswerSeed[]; unmatched: UnmatchedSeed[] }> {
   const parsed = await generateStructuredJson<{ answers?: unknown; unmatched?: unknown }>(
     [

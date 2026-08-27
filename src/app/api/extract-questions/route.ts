@@ -33,6 +33,8 @@ export async function POST(request: Request) {
       number: seed.number,
       subPart: seed.subPart,
       text: seed.text,
+      type: seed.type === "mcq" ? "mcq" : "written",
+      options: seed.type === "mcq" && seed.options ? seed.options : [],
       maxMarks: seed.maxMarks ?? null,
       matched: false,
       score: null,

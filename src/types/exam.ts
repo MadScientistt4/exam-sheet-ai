@@ -15,6 +15,14 @@ export type QuestionScore = {
   total: number;
 };
 
+export type QuestionType = "written" | "mcq";
+
+export type QuestionOption = {
+  /** Printed label, e.g. "A" or "a" — exactly as shown on the paper. */
+  label: string;
+  text: string;
+};
+
 /** Normalized as fractions (0-1) of the page's width/height, top-left origin. */
 export type AnswerRegion = {
   page: number;
@@ -29,6 +37,8 @@ export type ExtractedQuestion = {
   number: string;
   subPart?: string;
   text: string;
+  type: QuestionType;
+  options: QuestionOption[];
   maxMarks: number | null;
   matched: boolean;
   score: QuestionScore | null;

@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { DEFAULT_MAX_MARKS, mapAndGradeAnswers } from "@/lib/gemini";
 import { ANSWER_SHEET_TYPES, MAX_FILE_BYTES } from "@/lib/upload-constraints";
-import type { AnswerRegion, ExtractedQuestion, UnmatchedAnswer } from "@/types/exam";
+import type {
+  AnswerRegion,
+  ExtractedQuestion,
+  QuestionOption,
+  QuestionType,
+  UnmatchedAnswer,
+} from "@/types/exam";
 
 export const runtime = "nodejs";
 
@@ -31,6 +37,8 @@ type IncomingQuestion = {
   number: string;
   subPart?: string;
   text: string;
+  type: QuestionType;
+  options: QuestionOption[];
   maxMarks: number | null;
 };
 
@@ -75,6 +83,8 @@ export async function POST(request: Request) {
         number: q.number,
         subPart: q.subPart,
         text: q.text,
+        type: q.type,
+        options: q.options.length ? q.options : undefined,
         maxMarks: q.maxMarks ?? undefined,
       }))
     );
