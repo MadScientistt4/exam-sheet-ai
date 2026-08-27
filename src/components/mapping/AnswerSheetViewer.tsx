@@ -132,6 +132,17 @@ export function AnswerSheetViewer({
   );
 }
 
+// Bounding boxes from the model occasionally underestimate a line's trailing
+// edge, clipping the last word or two. A line of handwriting on an answer
+// sheet only ever belongs to one answer, so it's safe to pad the right edge
+// outward — there's nothing else on that line it could wrongly swallow.
+const RIGHT_EDGE_PAD = 0.04;
+
+function padRightEdge(region: AnswerRegion): AnswerRegion {
+  const maxWidth = 1 - region.x;
+  return { ...region, width: Math.min(region.width + RIGHT_EDGE_PAD, maxWidth) };
+}
+
 function RegionOverlay({
   region,
   tone,
@@ -141,16 +152,17 @@ function RegionOverlay({
   tone: "selected" | "unmatched";
   label?: string;
 }) {
+  const padded = padRightEdge(region);
   return (
     <div
       className={`absolute rounded border-2 ${
         tone === "selected" ? "border-emerald-500 bg-emerald-500/10" : "border-dashed border-white/40 bg-white/5"
       }`}
       style={{
-        left: `${region.x * 100}%`,
-        top: `${region.y * 100}%`,
-        width: `${region.width * 100}%`,
-        height: `${region.height * 100}%`,
+        left: `${padded.x * 100}%`,
+        top: `${padded.y * 100}%`,
+        width: `${padded.width * 100}%`,
+        height: `${padded.height * 100}%`,
       }}
     >
       {label && (

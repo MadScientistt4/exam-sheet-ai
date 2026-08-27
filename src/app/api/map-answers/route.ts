@@ -99,6 +99,7 @@ export async function POST(request: Request) {
       if (!seed) {
         return {
           ...q,
+          maxMarks: q.maxMarks ?? DEFAULT_MAX_MARKS,
           matched: false,
           score: null,
           aiFeedback: "No answer found on the sheet for this question.",

@@ -284,7 +284,7 @@ ${list}
 
 For each question in the list:
 - Determine whether the student attempted it anywhere on the sheet.
-- If attempted, find every region containing that answer. An answer may span multiple lines, or continue onto a later page — list one region per contiguous block of handwriting, in reading order. Tightly bound just the handwritten answer content, not the whole page.
+- If attempted, find every region containing that answer. An answer may span multiple lines, or continue onto a later page — list one region per contiguous block of handwriting, in reading order. Bound the handwritten answer content closely top and bottom, but on each line a student only ever writes one answer, so it's safe (and preferred) to extend a region's right edge to the line's full writing width rather than cropping tightly right where the ink happens to end — cutting off the last word or two is worse than including a little trailing whitespace.
 - Each region is: {"page": <1-indexed page number matching the sheet's page order>, "x": <0-1>, "y": <0-1>, "width": <0-1>, "height": <0-1>} where x/y/width/height are FRACTIONS of that page's full width/height (top-left origin). Do not use a 0-1000 scale — use 0-1 fractions.
 - Grade the answer against the question. If the question has a marks value shown above, score out of exactly that value — it is already the correct max for this specific question or sub-part, so do not adjust it. If no marks value is shown, score out of ${DEFAULT_MAX_MARKS}. Give one sentence of specific, constructive feedback explaining the score.
 - If not attempted anywhere on the sheet, set matched to false, regions to an empty array, omit score, and set feedback to "No answer found on the sheet for this question."${mcqGuidance}

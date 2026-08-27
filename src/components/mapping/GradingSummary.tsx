@@ -3,6 +3,11 @@
 import { CheckCircle2, Circle, MinusCircle, XCircle } from "lucide-react";
 import type { ExtractedQuestion } from "@/types/exam";
 
+// Mirrors DEFAULT_MAX_MARKS in src/lib/gemini.ts — duplicated rather than
+// imported so this client component doesn't pull the server-only Gemini SDK
+// into the browser bundle just for one constant.
+const FALLBACK_MAX_MARKS = 2;
+
 type GradingSummaryProps = {
   questions: ExtractedQuestion[];
   overallFeedback: string | null;
@@ -17,13 +22,17 @@ export function GradingSummary({ questions, overallFeedback }: GradingSummaryPro
   let unanswered = 0;
 
   for (const q of questions) {
+    // Every question counts toward the total, answered or not — an unanswered
+    // question should pull the score down, not just vanish from the denominator.
+    const maxMarks = q.maxMarks ?? FALLBACK_MAX_MARKS;
+    total += maxMarks;
+
     if (!q.score) {
       unanswered += 1;
       continue;
     }
     earned += q.score.earned;
-    total += q.score.total;
-    const ratio = q.score.total === 0 ? 0 : q.score.earned / q.score.total;
+    const ratio = maxMarks === 0 ? 0 : q.score.earned / maxMarks;
     if (ratio >= 1) correct += 1;
     else if (ratio > 0) partial += 1;
     else incorrect += 1;
