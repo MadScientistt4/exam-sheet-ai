@@ -15,7 +15,6 @@ type QuestionListProps = {
   questions: ExtractedQuestion[];
   selectedId: string | null;
   onSelect: (id: string) => void;
-  summary: { earned: number; total: number; unanswered: number };
   className?: string;
 };
 
@@ -23,21 +22,14 @@ export function QuestionList({
   questions,
   selectedId,
   onSelect,
-  summary,
   className = "flex",
 }: QuestionListProps) {
   const seenNumbers = new Set<string>();
 
   return (
     <div className={`${className} h-full flex-col overflow-hidden rounded-2xl bg-white`}>
-      <div className="flex shrink-0 flex-col gap-2 border-b border-panel-border p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-base font-bold text-ink">Extracted Questions (from question paper)</h2>
-          <p className="text-xs text-muted">
-            Score {summary.earned}/{summary.total}
-            {summary.unanswered > 0 ? ` · ${summary.unanswered} unanswered` : ""}
-          </p>
-        </div>
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-panel-border p-4">
+        <h2 className="text-base font-bold text-ink">Extracted Questions (from question paper)</h2>
         <button
           type="button"
           className="self-start rounded-full border border-panel-border px-3 py-1.5 text-xs font-semibold text-ink hover:bg-canvas sm:self-auto"

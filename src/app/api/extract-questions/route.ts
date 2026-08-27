@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { extractQuestionsFromPaper } from "@/lib/gemini";
-import { MAX_FILE_BYTES, QUESTION_PAPER_TYPES } from "@/lib/upload-constraints";
+import { MAX_FILE_BYTES, MAX_FILE_LABEL, QUESTION_PAPER_TYPES } from "@/lib/upload-constraints";
 import type { ExtractedQuestion } from "@/types/exam";
 
 export const runtime = "nodejs";
+// Retry + model-fallback can chain several Gemini calls; keep headroom under
+// Vercel's Hobby-plan max (60s without Fluid Compute).
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
   let formData: FormData;
@@ -21,7 +24,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unsupported file type." }, { status: 400 });
   }
   if (file.size > MAX_FILE_BYTES) {
-    return NextResponse.json({ error: "File exceeds the 10MB limit." }, { status: 400 });
+    return NextResponse.json({ error: `File exceeds the ${MAX_FILE_LABEL} limit.` }, { status: 400 });
   }
 
   try {

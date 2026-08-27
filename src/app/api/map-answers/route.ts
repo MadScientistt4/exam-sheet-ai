@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { DEFAULT_MAX_MARKS, mapAndGradeAnswers } from "@/lib/gemini";
-import { ANSWER_SHEET_TYPES, MAX_FILE_BYTES } from "@/lib/upload-constraints";
+import { ANSWER_SHEET_TYPES, MAX_FILE_BYTES, MAX_FILE_LABEL } from "@/lib/upload-constraints";
 import type {
   AnswerRegion,
   ExtractedQuestion,
@@ -10,6 +10,9 @@ import type {
 } from "@/types/exam";
 
 export const runtime = "nodejs";
+// Retry + model-fallback can chain several Gemini calls; keep headroom under
+// Vercel's Hobby-plan max (60s without Fluid Compute).
+export const maxDuration = 60;
 
 function clampFraction(n: unknown): number {
   const num = typeof n === "number" && Number.isFinite(n) ? n : 0;
@@ -60,7 +63,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unsupported file type." }, { status: 400 });
   }
   if (file.size > MAX_FILE_BYTES) {
-    return NextResponse.json({ error: "File exceeds the 10MB limit." }, { status: 400 });
+    return NextResponse.json({ error: `File exceeds the ${MAX_FILE_LABEL} limit.` }, { status: 400 });
   }
   if (typeof questionsRaw !== "string") {
     return NextResponse.json({ error: "Missing 'questions' field." }, { status: 400 });
@@ -76,7 +79,7 @@ export async function POST(request: Request) {
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
-    const { answers, unmatched } = await mapAndGradeAnswers(
+    const { answers, unmatched, overallFeedback } = await mapAndGradeAnswers(
       buffer.toString("base64"),
       file.type,
       questions.map((q) => ({
@@ -127,7 +130,7 @@ export async function POST(request: Request) {
       })
       .filter((u): u is UnmatchedAnswer => u !== null);
 
-    return NextResponse.json({ questions: merged, unmatched: unmatchedAnswers });
+    return NextResponse.json({ questions: merged, unmatched: unmatchedAnswers, overallFeedback });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Answer mapping failed.";
     return NextResponse.json({ error: message }, { status: 502 });

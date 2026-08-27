@@ -6,7 +6,7 @@ import { useExamStore } from "@/components/exam/ExamStoreContext";
 import { MappingScreen } from "@/components/mapping/MappingScreen";
 
 export default function MappingPage() {
-  const { questions, answerSheet, unmatched } = useExamStore();
+  const { questions, answerSheet, unmatched, overallFeedback } = useExamStore();
   const router = useRouter();
 
   useEffect(() => {
@@ -15,5 +15,12 @@ export default function MappingPage() {
 
   if (!questions || !answerSheet) return null;
 
-  return <MappingScreen questions={questions} answerSheet={answerSheet} unmatched={unmatched} />;
+  return (
+    <MappingScreen
+      questions={questions}
+      answerSheet={answerSheet}
+      unmatched={unmatched}
+      overallFeedback={overallFeedback}
+    />
+  );
 }

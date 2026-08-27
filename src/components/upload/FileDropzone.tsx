@@ -3,6 +3,7 @@
 import { useRef, useState, type DragEvent } from "react";
 import { FileText, ImageIcon, Upload, X } from "lucide-react";
 import { formatBytes } from "@/lib/format";
+import { MAX_FILE_LABEL } from "@/lib/upload-constraints";
 import type { UploadedDocument } from "@/types/exam";
 
 type FileDropzoneProps = {
@@ -109,7 +110,9 @@ export function FileDropzone({
           <span className="text-base font-bold text-ink">
             {label} <span className="text-accent">{highlight}</span>
           </span>
-          <span className="text-sm text-muted">{busy ? "Reading file..." : "Max 10MB"}</span>
+          <span className="text-sm text-muted">
+            {busy ? "Reading file..." : `Max ${MAX_FILE_LABEL}`}
+          </span>
         </button>
       )}
 

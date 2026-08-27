@@ -1,38 +1,30 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { QuestionList } from "@/components/mapping/QuestionList";
 import { AnswerSheetViewer } from "@/components/mapping/AnswerSheetViewer";
+import { GradingSummary } from "@/components/mapping/GradingSummary";
 import type { ExtractedQuestion, UnmatchedAnswer, UploadedDocument } from "@/types/exam";
 
 type MappingScreenProps = {
   questions: ExtractedQuestion[];
   answerSheet: UploadedDocument;
   unmatched: UnmatchedAnswer[];
+  overallFeedback: string | null;
 };
 
 type MobileTab = "questions" | "answers";
 
-export function MappingScreen({ questions, answerSheet, unmatched }: MappingScreenProps) {
+export function MappingScreen({
+  questions,
+  answerSheet,
+  unmatched,
+  overallFeedback,
+}: MappingScreenProps) {
   const [selectedId, setSelectedId] = useState<string | null>(questions[0]?.id ?? null);
   const [page, setPage] = useState(1);
   const [zoom, setZoom] = useState(100);
   const [mobileTab, setMobileTab] = useState<MobileTab>("questions");
-
-  const summary = useMemo(() => {
-    let earned = 0;
-    let total = 0;
-    let unanswered = 0;
-    for (const q of questions) {
-      if (q.score) {
-        earned += q.score.earned;
-        total += q.score.total;
-      } else {
-        unanswered += 1;
-      }
-    }
-    return { earned, total, unanswered };
-  }, [questions]);
 
   function handleSelect(id: string) {
     const isDeselecting = selectedId === id;
@@ -46,6 +38,8 @@ export function MappingScreen({ questions, answerSheet, unmatched }: MappingScre
 
   return (
     <div className="flex min-h-160 flex-1 flex-col gap-4">
+      <GradingSummary questions={questions} overallFeedback={overallFeedback} />
+
       <div className="mx-auto flex shrink-0 items-center gap-1 rounded-full bg-white p-1 lg:hidden">
         <button
           type="button"
@@ -73,7 +67,6 @@ export function MappingScreen({ questions, answerSheet, unmatched }: MappingScre
           questions={questions}
           selectedId={selectedId}
           onSelect={handleSelect}
-          summary={summary}
         />
         <AnswerSheetViewer
           className={`${mobileTab === "answers" ? "flex" : "hidden"} lg:flex`}

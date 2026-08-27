@@ -3,7 +3,12 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { buildUploadedDocument } from "@/lib/document";
-import { ANSWER_SHEET_TYPES, MAX_FILE_BYTES, QUESTION_PAPER_TYPES } from "@/lib/upload-constraints";
+import {
+  ANSWER_SHEET_TYPES,
+  MAX_FILE_BYTES,
+  MAX_FILE_LABEL,
+  QUESTION_PAPER_TYPES,
+} from "@/lib/upload-constraints";
 import type { ExtractedQuestion, UnmatchedAnswer, UploadedDocument } from "@/types/exam";
 
 type FieldKey = "question" | "answer";
@@ -18,6 +23,7 @@ type ExamStore = {
   extractError: string | null;
   questions: ExtractedQuestion[] | null;
   unmatched: UnmatchedAnswer[];
+  overallFeedback: string | null;
   selectFile: (field: FieldKey, file: File) => Promise<void>;
   removeFile: (field: FieldKey) => void;
   startMapping: () => Promise<void>;
@@ -39,6 +45,7 @@ export function ExamStoreProvider({ children }: { children: React.ReactNode }) {
   const [extractError, setExtractError] = useState<string | null>(null);
   const [questions, setQuestions] = useState<ExtractedQuestion[] | null>(null);
   const [unmatched, setUnmatched] = useState<UnmatchedAnswer[]>([]);
+  const [overallFeedback, setOverallFeedback] = useState<string | null>(null);
 
   const selectFile = useCallback(async (field: FieldKey, file: File) => {
     const allowedTypes = field === "question" ? QUESTION_PAPER_TYPES : ANSWER_SHEET_TYPES;
@@ -48,7 +55,7 @@ export function ExamStoreProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     if (file.size > MAX_FILE_BYTES) {
-      setFieldErrors((e) => ({ ...e, [field]: "File exceeds the 10MB limit." }));
+      setFieldErrors((e) => ({ ...e, [field]: `File exceeds the ${MAX_FILE_LABEL} limit.` }));
       return;
     }
     setFieldErrors((e) => ({ ...e, [field]: null }));
@@ -113,6 +120,7 @@ export function ExamStoreProvider({ children }: { children: React.ReactNode }) {
 
       setQuestions(answerData.questions);
       setUnmatched(answerData.unmatched ?? []);
+      setOverallFeedback(answerData.overallFeedback ?? null);
       router.push("/exams/mapping");
     } catch (error) {
       setExtractError(error instanceof Error ? error.message : "Something went wrong.");
@@ -131,6 +139,7 @@ export function ExamStoreProvider({ children }: { children: React.ReactNode }) {
       extractError,
       questions,
       unmatched,
+      overallFeedback,
       selectFile,
       removeFile,
       startMapping,
@@ -144,6 +153,7 @@ export function ExamStoreProvider({ children }: { children: React.ReactNode }) {
       extractError,
       questions,
       unmatched,
+      overallFeedback,
       selectFile,
       removeFile,
       startMapping,

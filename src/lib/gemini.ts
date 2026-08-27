@@ -247,8 +247,9 @@ const ANSWER_MAPPING_SCHEMA = {
         required: ["page", "x", "y", "width", "height", "text"],
       },
     },
+    overallFeedback: { type: "string" },
   },
-  required: ["answers"],
+  required: ["answers", "overallFeedback"],
 };
 
 type QuestionForPrompt = {
@@ -294,6 +295,8 @@ For each question in the list:
 
 Also list any handwritten content on the sheet that does NOT correspond to any question above (e.g. scratch work, an answer to a question not in this list, notes) as "unmatched" entries using the same region format plus a short "text" snippet of what it says.
 
+Finally, write "overallFeedback": 2-3 sentences summarizing the student's performance across the whole exam — call out what they did well and what to work on, and keep it encouraging but honest. Base it only on the grading above, not on anything else.
+
 Return only JSON matching the provided schema — no markdown fences, no commentary.`;
 }
 
@@ -301,8 +304,12 @@ export async function mapAndGradeAnswers(
   fileBase64: string,
   mimeType: string,
   questions: QuestionForPrompt[]
-): Promise<{ answers: AnswerSeed[]; unmatched: UnmatchedSeed[] }> {
-  const parsed = await generateStructuredJson<{ answers?: unknown; unmatched?: unknown }>(
+): Promise<{ answers: AnswerSeed[]; unmatched: UnmatchedSeed[]; overallFeedback: string | null }> {
+  const parsed = await generateStructuredJson<{
+    answers?: unknown;
+    unmatched?: unknown;
+    overallFeedback?: unknown;
+  }>(
     [
       {
         role: "user",
@@ -323,5 +330,6 @@ export async function mapAndGradeAnswers(
   return {
     answers: parsed.answers as AnswerSeed[],
     unmatched: Array.isArray(parsed.unmatched) ? (parsed.unmatched as UnmatchedSeed[]) : [],
+    overallFeedback: typeof parsed.overallFeedback === "string" ? parsed.overallFeedback : null,
   };
 }
