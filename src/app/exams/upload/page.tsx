@@ -4,20 +4,25 @@ import { useExamStore } from "@/components/exam/ExamStoreContext";
 import { UploadScreen } from "@/components/upload/UploadScreen";
 import { ExtractingScreen } from "@/components/extracting/ExtractingScreen";
 
+const STAGE_LABEL: Record<"questions" | "answers", string> = {
+  questions: "Extracting questions...",
+  answers: "Reading the answer sheet...",
+};
+
 export default function UploadPage() {
   const {
     questionPaper,
     answerSheet,
     busyField,
     fieldErrors,
-    extracting,
+    extractingStage,
     extractError,
     selectFile,
     removeFile,
     startMapping,
   } = useExamStore();
 
-  if (extracting) return <ExtractingScreen />;
+  if (extractingStage) return <ExtractingScreen label={STAGE_LABEL[extractingStage]} />;
 
   return (
     <div className="flex flex-1 flex-col gap-3">

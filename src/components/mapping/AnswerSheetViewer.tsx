@@ -1,15 +1,14 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { Kalam } from "next/font/google";
-import { ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react";
-import type { AnswerPage, ExtractedQuestion } from "@/types/exam";
-
-const kalam = Kalam({ subsets: ["latin"], weight: ["400", "700"] });
+import { useEffect, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, Loader2, Minus, Plus } from "lucide-react";
+import { renderPdfPageToDataUrl } from "@/lib/pdf";
+import type { AnswerRegion, ExtractedQuestion, UnmatchedAnswer, UploadedDocument } from "@/types/exam";
 
 type AnswerSheetViewerProps = {
-  pages: AnswerPage[];
+  sheet: UploadedDocument;
   questions: ExtractedQuestion[];
+  unmatched: UnmatchedAnswer[];
   page: number;
   onPageChange: (page: number) => void;
   zoom: number;
@@ -18,8 +17,9 @@ type AnswerSheetViewerProps = {
 };
 
 export function AnswerSheetViewer({
-  pages,
+  sheet,
   questions,
+  unmatched,
   page,
   onPageChange,
   zoom,
@@ -27,14 +27,31 @@ export function AnswerSheetViewer({
   selectedQuestionId,
 }: AnswerSheetViewerProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const current = pages.find((p) => p.page === page) ?? pages[0];
-  const questionByNumber = new Map(questions.map((q) => [q.id, q]));
+  const [pageImages, setPageImages] = useState<Record<number, string>>({});
+
+  const selectedQuestion = questions.find((q) => q.id === selectedQuestionId) ?? null;
 
   useEffect(() => {
-    if (!selectedQuestionId) return;
-    const el = scrollRef.current?.querySelector(`[data-question-id="${selectedQuestionId}"]`);
-    el?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [selectedQuestionId, page]);
+    if (sheet.kind === "image") return;
+    if (pageImages[page]) return;
+
+    let cancelled = false;
+    renderPdfPageToDataUrl(sheet.file, page).then((dataUrl) => {
+      if (!cancelled) setPageImages((prev) => ({ ...prev, [page]: dataUrl }));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sheet, page, pageImages]);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }, [page]);
+
+  const imageSrc = sheet.kind === "image" ? sheet.previewUrl : pageImages[page];
+  const regionsOnPage = selectedQuestion?.regions.filter((r) => r.page === page) ?? [];
+  const unmatchedOnPage = unmatched.filter((u) => u.page === page);
 
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-2xl bg-ink">
@@ -71,12 +88,12 @@ export function AnswerSheetViewer({
               <ChevronLeft className="h-3.5 w-3.5" />
             </button>
             <span>
-              Page {page} of {pages.length}
+              Page {page} of {sheet.pageCount}
             </span>
             <button
               type="button"
               aria-label="Next page"
-              disabled={page >= pages.length}
+              disabled={page >= sheet.pageCount}
               onClick={() => onPageChange(page + 1)}
               className="flex h-6 w-6 items-center justify-center rounded-full hover:bg-white/10 disabled:opacity-30"
             >
@@ -87,53 +104,55 @@ export function AnswerSheetViewer({
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-auto bg-black/20 p-4">
-        <div
-          style={{ width: `${zoom}%`, transformOrigin: "top left" }}
-          className="mx-auto flex min-h-full flex-col gap-4 rounded-lg bg-[#fdfcf7] p-6"
-        >
-          {current?.blocks.map((block, i) => {
-            const question = block.questionId ? questionByNumber.get(block.questionId) : null;
-            const selected = block.questionId === selectedQuestionId;
-            const label = question
-              ? `Q${question.number}${question.subPart ? ` (${question.subPart})` : ""}`
-              : null;
+        <div style={{ width: `${zoom}%` }} className="relative mx-auto">
+          {imageSrc ? (
+            // eslint-disable-next-line @next/next/no-img-element -- client-generated data: URL of variable size, not an optimizable static asset
+            <img src={imageSrc} alt={`Answer sheet page ${page}`} className="w-full rounded-lg" />
+          ) : (
+            <div className="flex aspect-3/4 w-full flex-col items-center justify-center gap-2 rounded-lg bg-white/5 text-white/60">
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <span className="text-xs">Rendering page...</span>
+            </div>
+          )}
 
-            return (
-              <div
-                key={i}
-                data-question-id={block.questionId ?? undefined}
-                className={`relative rounded-md border-2 p-3 leading-8 ${kalam.className} ${
-                  selected
-                    ? "border-emerald-500 bg-emerald-50"
-                    : block.questionId === null
-                      ? "border-dashed border-muted/40"
-                      : "border-transparent"
-                }`}
-                style={{
-                  backgroundImage:
-                    "repeating-linear-gradient(to bottom, transparent, transparent 27px, #dbe3ef 28px)",
-                }}
-              >
-                {selected && label && (
-                  <span className="absolute -top-3 left-3 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold text-white">
-                    {label}
-                  </span>
-                )}
-                {block.questionId === null && (
-                  <span className="absolute -top-3 left-3 rounded-full bg-muted/70 px-2 py-0.5 text-[10px] font-bold text-white">
-                    Unmatched
-                  </span>
-                )}
-                {block.lines.map((line, li) => (
-                  <p key={li} className="text-lg text-ink">
-                    {line}
-                  </p>
-                ))}
-              </div>
-            );
-          })}
+          {regionsOnPage.map((region, i) => (
+            <RegionOverlay key={i} region={region} tone="selected" />
+          ))}
+          {unmatchedOnPage.map((region, i) => (
+            <RegionOverlay key={i} region={region} tone="unmatched" label="Unmatched" />
+          ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+function RegionOverlay({
+  region,
+  tone,
+  label,
+}: {
+  region: AnswerRegion;
+  tone: "selected" | "unmatched";
+  label?: string;
+}) {
+  return (
+    <div
+      className={`absolute rounded border-2 ${
+        tone === "selected" ? "border-emerald-500 bg-emerald-500/10" : "border-dashed border-white/40 bg-white/5"
+      }`}
+      style={{
+        left: `${region.x * 100}%`,
+        top: `${region.y * 100}%`,
+        width: `${region.width * 100}%`,
+        height: `${region.height * 100}%`,
+      }}
+    >
+      {label && (
+        <span className="absolute -top-3 left-1 rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-bold text-ink">
+          {label}
+        </span>
+      )}
     </div>
   );
 }

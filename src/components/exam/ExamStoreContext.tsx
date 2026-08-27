@@ -4,18 +4,20 @@ import { createContext, useCallback, useContext, useMemo, useState } from "react
 import { useRouter } from "next/navigation";
 import { buildUploadedDocument } from "@/lib/document";
 import { ACCEPTED_TYPES, MAX_FILE_BYTES } from "@/lib/upload-constraints";
-import type { ExtractedQuestion, UploadedDocument } from "@/types/exam";
+import type { ExtractedQuestion, UnmatchedAnswer, UploadedDocument } from "@/types/exam";
 
 type FieldKey = "question" | "answer";
+export type ExtractingStage = "questions" | "answers" | null;
 
 type ExamStore = {
   questionPaper: UploadedDocument | null;
   answerSheet: UploadedDocument | null;
   busyField: FieldKey | null;
   fieldErrors: Record<FieldKey, string | null>;
-  extracting: boolean;
+  extractingStage: ExtractingStage;
   extractError: string | null;
   questions: ExtractedQuestion[] | null;
+  unmatched: UnmatchedAnswer[];
   selectFile: (field: FieldKey, file: File) => Promise<void>;
   removeFile: (field: FieldKey) => void;
   startMapping: () => Promise<void>;
@@ -33,9 +35,10 @@ export function ExamStoreProvider({ children }: { children: React.ReactNode }) {
     question: null,
     answer: null,
   });
-  const [extracting, setExtracting] = useState(false);
+  const [extractingStage, setExtractingStage] = useState<ExtractingStage>(null);
   const [extractError, setExtractError] = useState<string | null>(null);
   const [questions, setQuestions] = useState<ExtractedQuestion[] | null>(null);
+  const [unmatched, setUnmatched] = useState<UnmatchedAnswer[]>([]);
 
   const selectFile = useCallback(async (field: FieldKey, file: File) => {
     if (!ACCEPTED_TYPES.includes(file.type)) {
@@ -67,22 +70,50 @@ export function ExamStoreProvider({ children }: { children: React.ReactNode }) {
 
   const startMapping = useCallback(async () => {
     if (!questionPaper || !answerSheet) return;
-    setExtracting(true);
     setExtractError(null);
+
     try {
-      const formData = new FormData();
-      formData.append("questionPaper", questionPaper.file);
+      setExtractingStage("questions");
+      const questionForm = new FormData();
+      questionForm.append("questionPaper", questionPaper.file);
+      const questionRes = await fetch("/api/extract-questions", {
+        method: "POST",
+        body: questionForm,
+      });
+      const questionData = await questionRes.json();
+      if (!questionRes.ok) throw new Error(questionData.error || "Question extraction failed.");
 
-      const res = await fetch("/api/extract-questions", { method: "POST", body: formData });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Question extraction failed.");
+      const extracted: ExtractedQuestion[] = questionData.questions;
+      if (extracted.length === 0) {
+        throw new Error("No questions were found on the question paper.");
+      }
 
-      setQuestions(data.questions);
+      setExtractingStage("answers");
+      const answerForm = new FormData();
+      answerForm.append("answerSheet", answerSheet.file);
+      answerForm.append(
+        "questions",
+        JSON.stringify(
+          extracted.map((q) => ({
+            id: q.id,
+            number: q.number,
+            subPart: q.subPart,
+            text: q.text,
+            maxMarks: q.maxMarks,
+          }))
+        )
+      );
+      const answerRes = await fetch("/api/map-answers", { method: "POST", body: answerForm });
+      const answerData = await answerRes.json();
+      if (!answerRes.ok) throw new Error(answerData.error || "Answer mapping failed.");
+
+      setQuestions(answerData.questions);
+      setUnmatched(answerData.unmatched ?? []);
       router.push("/exams/mapping");
     } catch (error) {
       setExtractError(error instanceof Error ? error.message : "Something went wrong.");
     } finally {
-      setExtracting(false);
+      setExtractingStage(null);
     }
   }, [questionPaper, answerSheet, router]);
 
@@ -92,9 +123,10 @@ export function ExamStoreProvider({ children }: { children: React.ReactNode }) {
       answerSheet,
       busyField,
       fieldErrors,
-      extracting,
+      extractingStage,
       extractError,
       questions,
+      unmatched,
       selectFile,
       removeFile,
       startMapping,
@@ -104,9 +136,10 @@ export function ExamStoreProvider({ children }: { children: React.ReactNode }) {
       answerSheet,
       busyField,
       fieldErrors,
-      extracting,
+      extractingStage,
       extractError,
       questions,
+      unmatched,
       selectFile,
       removeFile,
       startMapping,

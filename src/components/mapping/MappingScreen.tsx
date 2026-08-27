@@ -3,14 +3,15 @@
 import { useMemo, useState } from "react";
 import { QuestionList } from "@/components/mapping/QuestionList";
 import { AnswerSheetViewer } from "@/components/mapping/AnswerSheetViewer";
-import { mockAnswerPages } from "@/lib/mockExtraction";
-import type { ExtractedQuestion } from "@/types/exam";
+import type { ExtractedQuestion, UnmatchedAnswer, UploadedDocument } from "@/types/exam";
 
 type MappingScreenProps = {
   questions: ExtractedQuestion[];
+  answerSheet: UploadedDocument;
+  unmatched: UnmatchedAnswer[];
 };
 
-export function MappingScreen({ questions }: MappingScreenProps) {
+export function MappingScreen({ questions, answerSheet, unmatched }: MappingScreenProps) {
   const [selectedId, setSelectedId] = useState<string | null>(questions[0]?.id ?? null);
   const [page, setPage] = useState(1);
   const [zoom, setZoom] = useState(100);
@@ -33,7 +34,8 @@ export function MappingScreen({ questions }: MappingScreenProps) {
   function handleSelect(id: string) {
     setSelectedId((current) => (current === id ? null : id));
     const question = questions.find((q) => q.id === id);
-    if (question?.answerPage) setPage(question.answerPage);
+    const firstRegion = question?.regions[0];
+    if (firstRegion) setPage(firstRegion.page);
   }
 
   return (
@@ -44,21 +46,16 @@ export function MappingScreen({ questions }: MappingScreenProps) {
         onSelect={handleSelect}
         summary={summary}
       />
-      <div className="flex flex-col gap-2">
-        <div className="rounded-xl bg-amber-100 px-4 py-2 text-sm font-medium text-amber-800">
-          Answer sheet mapping isn&apos;t wired up yet — the panel below shows sample data, not
-          your uploaded answer sheet.
-        </div>
-        <AnswerSheetViewer
-          pages={mockAnswerPages}
-          questions={questions}
-          page={page}
-          onPageChange={setPage}
-          zoom={zoom}
-          onZoomChange={setZoom}
-          selectedQuestionId={selectedId}
-        />
-      </div>
+      <AnswerSheetViewer
+        sheet={answerSheet}
+        questions={questions}
+        unmatched={unmatched}
+        page={page}
+        onPageChange={setPage}
+        zoom={zoom}
+        onZoomChange={setZoom}
+        selectedQuestionId={selectedId}
+      />
     </div>
   );
 }

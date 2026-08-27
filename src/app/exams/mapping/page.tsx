@@ -6,14 +6,14 @@ import { useExamStore } from "@/components/exam/ExamStoreContext";
 import { MappingScreen } from "@/components/mapping/MappingScreen";
 
 export default function MappingPage() {
-  const { questions } = useExamStore();
+  const { questions, answerSheet, unmatched } = useExamStore();
   const router = useRouter();
 
   useEffect(() => {
-    if (!questions) router.replace("/exams/upload");
-  }, [questions, router]);
+    if (!questions || !answerSheet) router.replace("/exams/upload");
+  }, [questions, answerSheet, router]);
 
-  if (!questions) return null;
+  if (!questions || !answerSheet) return null;
 
-  return <MappingScreen questions={questions} />;
+  return <MappingScreen questions={questions} answerSheet={answerSheet} unmatched={unmatched} />;
 }

@@ -15,22 +15,27 @@ export type QuestionScore = {
   total: number;
 };
 
+/** Normalized as fractions (0-1) of the page's width/height, top-left origin. */
+export type AnswerRegion = {
+  page: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
 export type ExtractedQuestion = {
   id: string;
   number: string;
   subPart?: string;
   text: string;
+  maxMarks: number | null;
+  matched: boolean;
   score: QuestionScore | null;
   aiFeedback: string | null;
-  answerPage: number | null;
+  regions: AnswerRegion[];
 };
 
-export type AnswerBlock = {
-  questionId: string | null;
-  lines: string[];
-};
-
-export type AnswerPage = {
-  page: number;
-  blocks: AnswerBlock[];
+export type UnmatchedAnswer = AnswerRegion & {
+  text: string;
 };

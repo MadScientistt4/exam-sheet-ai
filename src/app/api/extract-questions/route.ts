@@ -33,9 +33,11 @@ export async function POST(request: Request) {
       number: seed.number,
       subPart: seed.subPart,
       text: seed.text,
+      maxMarks: seed.maxMarks ?? null,
+      matched: false,
       score: null,
       aiFeedback: null,
-      answerPage: null,
+      regions: [],
     }));
 
     return NextResponse.json({ questions });
